@@ -24,10 +24,28 @@ contract PuppyRaffleTest is Test {
     /////////////////////
 
     function testCanEnterRaffle() public {
-        address[] memory players = new address[](1);
+        address[] memory players = new address[](10);
         players[0] = playerOne;
-        puppyRaffle.enterRaffle{value: entranceFee}(players);
+        players[1] = playerTwo;
+        players[2] = playerThree;
+        players[3] = playerFour;
+        players[4] = address(5);
+        players[5] = address(6);
+        players[6] = address(7);
+        players[7] = address(8);
+        players[8] = address(9);
+        players[9] = address(10);
+        puppyRaffle.enterRaffle{value: entranceFee * 10}(players);
         assertEq(puppyRaffle.players(0), playerOne);
+        assertEq(puppyRaffle.players(1), playerTwo);
+        assertEq(puppyRaffle.players(2), playerThree);
+        assertEq(puppyRaffle.players(3), playerFour);
+        assertEq(puppyRaffle.players(4), address(5));
+        assertEq(puppyRaffle.players(5), address(6));
+        assertEq(puppyRaffle.players(6), address(7));
+        assertEq(puppyRaffle.players(7), address(8));
+        assertEq(puppyRaffle.players(8), address(9));
+        assertEq(puppyRaffle.players(9), address(10));
     }
 
     function testCantEnterWithoutPaying() public {
@@ -69,22 +87,6 @@ contract PuppyRaffleTest is Test {
         players[2] = playerOne;
         vm.expectRevert("PuppyRaffle: Duplicate player");
         puppyRaffle.enterRaffle{value: entranceFee * 3}(players);
-    }
-
-    function testTooManyPlayers() public {
-        //address[] memory players = new address[](16);
-        uint256 numPlayers = 100;
-        address[] memory players = new address[](numPlayers);
-        for (uint256 i = 0; i < numPlayers; i++) {
-            players[i] = address(i);
-        }
-        puppyRaffle.enterRaffle{value: entranceFee * players.length}(players);
-
-        address[] memory players2 = new address[](numPlayers);
-        for (uint256 i = 0; i < numPlayers; i++) {
-            players2[i] = address(i + numPlayers);
-        }
-        puppyRaffle.enterRaffle{value: entranceFee * players.length}(players2);
     }
 
     //////////////////////

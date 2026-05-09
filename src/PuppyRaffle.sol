@@ -16,6 +16,14 @@ import {Base64} from "lib/base64/base64.sol";
 /// 4. Every X seconds, the raffle will be able to draw a winner and be minted a random puppy
 /// 5. The owner of the protocol will set a feeAddress to take a cut of the `value`, and the rest of the funds will be sent to the winner of the puppy.
 contract PuppyRaffle is ERC721, Ownable {
+    enum EnterRaffleStatus {
+        NOT_ENTERED,
+        ENTERED
+    }
+
+    EnterRaffleStatus public status;
+    mapping(address => EnterRaffleStatus) public playerEnteredStatus;
+
     using Address for address payable;
 
     uint256 public immutable entranceFee;
@@ -96,27 +104,36 @@ contract PuppyRaffle is ERC721, Ownable {
 
         // Check for duplicates
         /// s Use enum status like ENTERED, NON-PARTICIPANTS
-        for (uint256 i = 0; i < players.length - 1; i++) {
+        if (playerEnteredStatus[msg.sender] == EnterRaffleStatus.ENTERED) {
+            revert("PuppyRaffle: Duplicate player");
+        }
+        playerEnteredStatus[msg.sender] = EnterRaffleStatus.ENTERED;
+
+        /*for (uint256 i = 0; i < players.length - 1; i++) {
             for (uint256 j = i + 1; j < players.length; j++) {
                 require(
                     players[i] != players[j],
                     "PuppyRaffle: Duplicate player"
                 );
             }
-        }
+        }*/
+
         emit RaffleEnter(newPlayers);
     }
 
     /// @param playerIndex the index of the player to refund. You can find it externally by calling `getActivePlayerIndex`
     /// @dev This function will allow there to be blank spots in the array
     /// e Function should be payable since money is being retrieved
+    /// @notice This function is vulnerable to reentrancy attacks, since the state is updated after the call to the player. To fix this, we should update the state before sending the funds.
+    /// q Why do we need playerIndex? Why not just msg.sender?
+
     function refund(uint256 playerIndex) public {
         address playerAddress = players[playerIndex];
         require(
             playerAddress == msg.sender,
             "PuppyRaffle: Only the player can refund"
         );
-        /// q What does this do exactly?
+        // q What does this do exactly?
         require(
             playerAddress != address(0),
             "PuppyRaffle: Player already refunded, or is not active"
@@ -124,13 +141,14 @@ contract PuppyRaffle is ERC721, Ownable {
 
         payable(msg.sender).sendValue(entranceFee);
 
-        players[playerIndex] = address(0);
+        players[playerIndex] = address(0); //This should come before state is payable(msg.sender).sendValue(entranceFee);
         emit RaffleRefunded(playerAddress);
     }
 
     /// @notice a way to get the index in the array
     /// @param player the address of a player in the raffle
     /// @return the index of the player in the array, if they are not active, it returns 0
+    /// q Why not use mapping and status> ACTIVE/INACTIVE? This does not consider player at index 0.
     function getActivePlayerIndex(
         address player
     ) external view returns (uint256) {
