@@ -167,6 +167,13 @@ contract PuppyRaffle is ERC721, Ownable {
     /// @dev we use a hash of on-chain data to generate the random numbers
     /// @dev we reset the active players array after the winner is selected
     /// @dev we send 80% of the funds to the winner, the other 20% goes to the feeAddress
+
+    // audit randomness is weak since it is based on on-chain data that can be manipulated by miners. For example, the miner could choose to include or not include certain transactions to influence the block timestamp or the block difficulty.
+    // fixes To fix this, we could use an off-chain randomness source like Chainlink VRF.
+
+    // audit there is overflow vulnerability here since totalFees is a uint64, and fee could be a large number if there are many players. This could cause totalFees to overflow and wrap around to zero, which would allow anyone to withdraw all the funds from the contract.
+    // fixes To fix this, we could change totalFees to a uint256, which would allow for a much larger number of players without risking overflow.
+
     function selectWinner() external {
         require(
             block.timestamp >= raffleStartTime + raffleDuration,

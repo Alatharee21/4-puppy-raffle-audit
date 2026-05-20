@@ -84,3 +84,36 @@ This is a very much known concept.
 - Impact: HIGH
 - Likelihood: HIGH
 - Severity: MEDIUM
+
+### [] Integer overflow
+
+**Description:** There is overflow vulnerability here since totalFees is a uint64, and fee could be a large number if there are many players.
+
+**Impact:** This could cause totalFees to overflow and wrap around to zero, which would allow anyone to withdraw all the funds from the contract.
+
+**Proof of Concept:**
+```javascript
+function testTotalFeesOverflow() public {
+        address[] memory players = new address[](100);
+        for (uint256 i = 0; i < 100; i++) {
+            players[i] = address(i + 1);
+        }
+        puppyRaffle.enterRaffle{value: entranceFee * 100}(players);
+
+        vm.warp(block.timestamp + duration + 1);
+        vm.roll(block.number + 1);
+
+        puppyRaffle.selectWinner();
+
+        uint256 expectedTotalFees = ((entranceFee * 100) * 20) / 100;
+        assertEq(puppyRaffle.totalFees(), expectedTotalFees);
+    }
+```
+
+**Mitigation:** We could change totalFees to a uint256, which would allow for a much larger number of players without risking overflow.
+```diff
+- totalFees = totalFees + uint64(fee);
+```
+```diff
++ totalFees = totalFees + uint256(fee);
+```
