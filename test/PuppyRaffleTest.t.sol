@@ -245,18 +245,18 @@ contract PuppyRaffleTest is Test {
     }
 
     function testTotalFeesOverflow() public {
-        address[] memory players = new address[](100);
-        for (uint256 i = 0; i < 100; i++) {
+        address[] memory players = new address[](256);
+        for (uint256 i = 0; i < 256; i++) {
             players[i] = address(i + 1);
         }
-        puppyRaffle.enterRaffle{value: entranceFee * 100}(players);
+        puppyRaffle.enterRaffle{value: entranceFee * 256}(players);
 
         vm.warp(block.timestamp + duration + 1);
         vm.roll(block.number + 1);
 
         puppyRaffle.selectWinner();
 
-        uint256 expectedTotalFees = ((entranceFee * 100) * 20) / 100;
+        uint256 expectedTotalFees = ((entranceFee * 256) * 20) / 100;
         assertEq(puppyRaffle.totalFees(), expectedTotalFees);
     }
 

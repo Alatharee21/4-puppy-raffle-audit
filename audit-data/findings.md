@@ -117,3 +117,59 @@ function testTotalFeesOverflow() public {
 ```diff
 + totalFees = totalFees + uint256(fee);
 ```
+### [] Unsafe Casting
+
+**Description:** `puppyRaffle::selectWinner` function calculates the fee and adds it to totalFees, but it casts the fee to uint64 before adding it to totalFees, which is a uint256. If the fee is larger than the maximum value of uint64, it will overflow and wrap around to zero.
+
+**Impact:** This could cause totalFees to overflow and wrap around to zero, which would allow anyone to withdraw all the funds from the contract.
+
+**Proof of Concept:**
+```javascript
+contract Unsafe{
+    uint64 private _unSafe1 = type(uint64).max;
+
+    function check_value() public view{
+        _unSafe1;
+    }
+    function change_value() public {
+        _unSafe1 = uint256(20);
+    }
+}
+```
+Here, an error is thrown when we try to change the value of _unSafe1 to 20, because it is being cast to uint64, which cannot hold the value of 20.
+*TypeError: Type uint256 is not implicitly convertible to expected type uint64.
+  --> unsafe.sol:11:20:
+   |
+11 |         _unSafe1 = uint256(20); //Unsafe casting
+   |                    ^^^^^^^^^^^
+*
+
+**Mitigation:** Uncast the fee and let it be added to totalFees as a uint256, which would allow for a much larger number of players without risking overflow.
+```diff
+- totalFees = totalFees + uint64(fee);
+```
+```diff
++ totalFees = totalFees + fee;
+```
+
+### [H-1] Mishandling of eth
+**Description:** The `PuppyRaffle::withdrawFees` function checks if the balance of the contract is equal to totalFees before allowing the owner to withdraw the fees. However, this check can be bypassed if an attacker sends a large amount of ether to the contract, which would increase the balance and allow them to withdraw the fees even if there are still players in the raffle. This could lead to a situation where the owner is unable to withdraw the fees, which could cause financial loss for the owner and damage the reputation of the contract.
+```diff
+            address(this).balance == uint256(totalFees),
+            "PuppyRaffle: There are currently players active!"
+```
+
+**Impact:** This condition is meant to prevent the owner from withdrawing fees while there are still players in the raffle, but it can be bypassed by anyone who can manipulate the balance of the contract. For example, an attacker could send a large amount of ether to the contract, which would increase the balance and allow them to withdraw the fees even if there are still players in the raffle. This could lead to a situation where the owner is unable to withdraw the fees, which could cause financial loss for the owner and damage the reputation of the contract.
+
+**Proof of Concept:**
+1. An attacker could deploy a malicious contract that sends a large amount of ether to the PuppyRaffle contract.
+```javascript
+contract Malicious {
+    function attack(address payable _puppyRaffle) public payable {
+        require(msg.value > 0, "Must send some ether");
+        (bool success, ) = _puppyRaffle.call{value: msg.value}("");
+        require(success, "Attack failed");
+    }
+}
+```
+**Mitigation:** To mitigate this issue, the `withdrawFees` function should be restricted to only the owner of the contract, and the check for the balance should be removed. Instead, the function should simply allow the owner to withdraw the fees without any conditions. This way, even if an attacker sends a large amount of ether to the contract, it will not affect the owner's ability to withdraw the fees.

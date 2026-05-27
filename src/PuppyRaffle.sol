@@ -217,6 +217,7 @@ contract PuppyRaffle is ERC721, Ownable {
     /// q Anyone can withdraw fees and also function should be payable
     function withdrawFees() external {
         require(
+            //Mishandling of eth
             address(this).balance == uint256(totalFees),
             "PuppyRaffle: There are currently players active!"
         );
